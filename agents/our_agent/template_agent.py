@@ -1,7 +1,8 @@
 import logging
+from decimal import Decimal
 from random import randint
 from time import time
-from typing import cast
+from typing import cast, Dict
 
 from geniusweb.actions.Accept import Accept
 from geniusweb.actions.Action import Action
@@ -53,7 +54,7 @@ class TemplateAgent(DefaultParty):
         self.logger.log(logging.INFO, "party is initialized")
 
         # a dictionary containing randomness values for all issues in the domain
-        self.randomness_values = {}
+        self.randomness_values: Dict[str, Decimal] = {}
 
     def notifyChange(self, data: Inform):
         """MUST BE IMPLEMENTED
@@ -86,7 +87,7 @@ class TemplateAgent(DefaultParty):
             # get the individual weights for all issues from the agents profile
             # and calculate randomness values with them
             issue_weights = self.profile.getWeights()
-            self.create_randomness_values(issue_weights)
+            self.initialise_randomness_values(issue_weights)
 
             profile_connection.close()
 
@@ -258,12 +259,14 @@ class TemplateAgent(DefaultParty):
 
         return score
 
-    def create_randomness_values(self, issue_weights):
+    def initialise_randomness_values(self, issue_weights: Dict[str, Decimal]):
         """Fill randomness values dictionary using all issue weights
 
         Args:
-            issue_weights (Dict[String, Decimal]: weights of al issues
+            issue_weights (Dict[str, Decimal]: weights of al issues
         """
         for issue_id, weight in issue_weights.items():
             self.randomness_values[issue_id] = (1 - weight)
+
+    
 
