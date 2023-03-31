@@ -16,6 +16,7 @@ from geniusweb.inform.Settings import Settings
 from geniusweb.inform.YourTurn import YourTurn
 from geniusweb.issuevalue.Bid import Bid
 from geniusweb.issuevalue.Domain import Domain
+from geniusweb.issuevalue.Value import Value
 from geniusweb.party.Capabilities import Capabilities
 from geniusweb.party.DefaultParty import DefaultParty
 from geniusweb.profile.utilityspace.LinearAdditiveUtilitySpace import (
@@ -281,7 +282,7 @@ class TemplateAgent(DefaultParty):
         Returns:
             Bid: the first bid of our agent
         """
-        first_bid = {}
+        first_bid: Dict[str, Value] = {}
         issue_utilities = self.profile.getUtilities
         for issue_string, value in issue_utilities.items():
             first_bid[issue_string] = value
