@@ -1,7 +1,8 @@
 import logging
+from decimal import Decimal
 from random import randint
 from time import time
-from typing import cast
+from typing import cast, Dict
 
 from geniusweb.actions.Accept import Accept
 from geniusweb.actions.Action import Action
@@ -52,6 +53,9 @@ class TemplateAgent(DefaultParty):
         self.opponent_model: OpponentModel = None
         self.logger.log(logging.INFO, "party is initialized")
 
+        # a dictionary containing randomness values for all issues in the domain
+        self.randomness_values: Dict[str, Decimal] = {}
+
     def notifyChange(self, data: Inform):
         """MUST BE IMPLEMENTED
         This is the entry point of all interaction with your agent after is has been initialised.
@@ -79,6 +83,12 @@ class TemplateAgent(DefaultParty):
             )
             self.profile = profile_connection.getProfile()
             self.domain = self.profile.getDomain()
+
+            # get the individual weights for all issues from the agents profile
+            # and calculate randomness values with them
+            issue_weights = self.profile.getWeights()
+            self.initialise_randomness_values(issue_weights)
+
             profile_connection.close()
 
         # ActionDone informs you of an action (an offer or an accept)
@@ -107,6 +117,9 @@ class TemplateAgent(DefaultParty):
             super().terminate()
         else:
             self.logger.log(logging.WARNING, "Ignoring unknown info " + str(data))
+
+
+
 
     def getCapabilities(self) -> Capabilities:
         """MUST BE IMPLEMENTED
@@ -245,3 +258,15 @@ class TemplateAgent(DefaultParty):
             score += opponent_score
 
         return score
+
+    def initialise_randomness_values(self, issue_weights: Dict[str, Decimal]):
+        """Fill randomness values dictionary using all issue weights
+
+        Args:
+            issue_weights (Dict[str, Decimal]: weights of al issues
+        """
+        for issue_id, weight in issue_weights.items():
+            self.randomness_values[issue_id] = (1 - weight)
+
+    
+
