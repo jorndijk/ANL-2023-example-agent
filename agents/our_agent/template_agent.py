@@ -1,4 +1,5 @@
 import logging
+import math
 from decimal import Decimal
 from random import randint
 from time import time
@@ -56,7 +57,13 @@ class TemplateAgent(DefaultParty):
 
         # a dictionary containing randomness values for all issues in the domain
         self.randomness_values: Dict[str, Decimal] = {}
-        self.number_of_bids: int = 0
+        # number of bids our agent has sent
+        self.number_of_agent_bids: int = 0
+        # number of bids the opponent has sent
+        self.number_of_opponent_bids: int = 0
+        # last bid send by our agent
+        self.last_send_bid: Bid = None
+
 
     def notifyChange(self, data: Inform):
         """MUST BE IMPLEMENTED
@@ -171,6 +178,8 @@ class TemplateAgent(DefaultParty):
             self.opponent_model.update(bid)
             # set bid as last received
             self.last_received_bid = bid
+            # increase number of bids received by 1
+            self.number_of_opponent_bids += 1
 
     def my_turn(self):
         """This method is called when it is our turn. It should decide upon an action
@@ -184,7 +193,9 @@ class TemplateAgent(DefaultParty):
             # if not, find a bid to propose as counter offer
             bid = self.find_bid()
             # increase number of bids done by our agent
-            self.number_of_bids += 1
+            self.number_of_agent_bids += 1
+            # set last send bid to this bid
+            self.last_send_bid = bid
             action = Offer(self.me, bid)
 
         # send the action
@@ -227,7 +238,7 @@ class TemplateAgent(DefaultParty):
         best_bid = None
 
         # if the first bid call function create_first_bid
-        if self.number_of_bids == 0:
+        if self.number_of_agent_bids == 0:
             best_bid = self.create_first_bid()
 
         # if not the first bid
@@ -287,5 +298,16 @@ class TemplateAgent(DefaultParty):
         for issue_string, value in issue_utilities.items():
             first_bid[issue_string] = value
         return Bid(first_bid)
+
+    def calculate_next_bid(self) -> Bid:
+        """Calculates the next bid
+
+        Returns:
+            Bid: the next bid
+        """
+        alfa = 2 / (1 + math.exp((-1 * self.number_of_opponent_bids) / 27.307)) - 1
+        opponent_model: Dict[str, Value] = {}
+        issue_values: Dict[str, Value] = self.last_send_bid.getIssueValues()
+        return Bid(issue_values)
 
 
