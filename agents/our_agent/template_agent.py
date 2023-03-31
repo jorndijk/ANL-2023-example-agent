@@ -16,6 +16,7 @@ from geniusweb.inform.Settings import Settings
 from geniusweb.inform.YourTurn import YourTurn
 from geniusweb.issuevalue.Bid import Bid
 from geniusweb.issuevalue.Domain import Domain
+from geniusweb.issuevalue.Value import Value
 from geniusweb.party.Capabilities import Capabilities
 from geniusweb.party.DefaultParty import DefaultParty
 from geniusweb.profile.utilityspace.LinearAdditiveUtilitySpace import (
@@ -55,6 +56,7 @@ class TemplateAgent(DefaultParty):
 
         # a dictionary containing randomness values for all issues in the domain
         self.randomness_values: Dict[str, Decimal] = {}
+        self.number_of_bids: int = 0
 
     def notifyChange(self, data: Inform):
         """MUST BE IMPLEMENTED
@@ -86,8 +88,7 @@ class TemplateAgent(DefaultParty):
 
             # get the individual weights for all issues from the agents profile
             # and calculate randomness values with them
-            issue_weights = self.profile.getWeights()
-            self.initialise_randomness_values(issue_weights)
+            self.initialise_randomness_values()
 
             profile_connection.close()
 
@@ -182,6 +183,8 @@ class TemplateAgent(DefaultParty):
         else:
             # if not, find a bid to propose as counter offer
             bid = self.find_bid()
+            # increase number of bids done by our agent
+            self.number_of_bids += 1
             action = Offer(self.me, bid)
 
         # send the action
@@ -223,12 +226,18 @@ class TemplateAgent(DefaultParty):
         best_bid_score = 0.0
         best_bid = None
 
-        # take 500 attempts to find a bid according to a heuristic score
-        for _ in range(500):
-            bid = all_bids.get(randint(0, all_bids.size() - 1))
-            bid_score = self.score_bid(bid)
-            if bid_score > best_bid_score:
-                best_bid_score, best_bid = bid_score, bid
+        # if the first bid call function create_first_bid
+        if self.number_of_bids == 0:
+            best_bid = self.create_first_bid()
+
+        # if not the first bid
+        else:
+            # take 500 attempts to find a bid according to a heuristic score
+            for _ in range(500):
+                bid = all_bids.get(randint(0, all_bids.size() - 1))
+                bid_score = self.score_bid(bid)
+                if bid_score > best_bid_score:
+                    best_bid_score, best_bid = bid_score, bid
 
         return best_bid
 
@@ -259,14 +268,24 @@ class TemplateAgent(DefaultParty):
 
         return score
 
-    def initialise_randomness_values(self, issue_weights: Dict[str, Decimal]):
+    def initialise_randomness_values(self):
         """Fill randomness values dictionary using all issue weights
-
-        Args:
-            issue_weights (Dict[str, Decimal]: weights of al issues
         """
-        for issue_id, weight in issue_weights.items():
-            self.randomness_values[issue_id] = (1 - weight)
+        issue_weights = self.profile.getWeight()
+        for issue_string, weight in issue_weights.items():
+            self.randomness_values[issue_string] = (1 - weight)
 
-    
+    def create_first_bid(self) -> Bid:
+        """Create the first bid containing all values that will give us the highest utility
+        stored in the Preference profile
+
+        Returns:
+            Bid: the first bid of our agent
+        """
+        first_bid: Dict[str, Value] = {}
+        issue_utilities = self.profile.getUtilities
+        for issue_string, value in issue_utilities.items():
+            first_bid[issue_string] = value
+        return Bid(first_bid)
+
 
