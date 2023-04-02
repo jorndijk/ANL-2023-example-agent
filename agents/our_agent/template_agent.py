@@ -64,6 +64,10 @@ class TemplateAgent(DefaultParty):
         self.number_of_opponent_bids: int = 0
         # last bid send by our agent
         self.last_send_bid: Bid = None
+        # concession rate opponent
+        self.concession_rate_opponent = 0.5
+        # list of utilities calculated from opponents Bids
+        self.utilities_opponent_bids = []
 
 
     def notifyChange(self, data: Inform):
@@ -179,6 +183,9 @@ class TemplateAgent(DefaultParty):
             self.opponent_model.update(bid)
             # set bid as last received
             self.last_received_bid = bid
+            # add utility of last bid to list of utilities and update the concession rate of the opponent
+            self.utilities_opponent_bids.append(self.profile.getUtility(bid))
+            self.update_concession_rate();
             # increase number of bids received by 1
             self.number_of_opponent_bids += 1
 
@@ -334,6 +341,16 @@ class TemplateAgent(DefaultParty):
         random_number: float = random.random()
         random_index: int = math.floor(size * random_number)
         return issue_value_set.get(random_index)
+
+    def update_concession_rate(self):
+        """Updates the concession rate of the opponent based on the utility of the last two bids
+        """
+        utilities = self.utilities_opponent_bids
+        number_of_utilities = len(utilities)
+        if number_of_utilities > 1:
+            new_concession = (utilities[number_of_utilities - 1] - utilities[number_of_utilities - 2]) \
+                             / utilities[number_of_utilities - 2]
+            self.concession_rate_opponent = new_concession
 
 
 
