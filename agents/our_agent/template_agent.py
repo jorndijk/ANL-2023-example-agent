@@ -65,8 +65,8 @@ class TemplateAgent(DefaultParty):
         # last bid send by our agent
         self.last_send_bid: Bid = None
         # concession rate opponent
-        self.concession_rate_opponent = 0.5
-        # list of utilities calculated from opponents Bids
+        self.concession_rate_opponent = 0
+        # list of predicted utilities of opponent from his bids
         self.utilities_opponent_bids = []
 
 
@@ -184,8 +184,8 @@ class TemplateAgent(DefaultParty):
             # set bid as last received
             self.last_received_bid = bid
             # add utility of last bid to list of utilities and update the concession rate of the opponent
-            self.utilities_opponent_bids.append(self.profile.getUtility(bid))
-            self.update_concession_rate();
+            self.utilities_opponent_bids.append(self.opponent_model.get_predicted_utility(bid))
+            self.update_concession_rate()
             # increase number of bids received by 1
             self.number_of_opponent_bids += 1
 
