@@ -1,7 +1,7 @@
 import logging
 import math
 from decimal import Decimal
-from random import randint
+from random import randint, random
 from time import time
 from typing import cast, Dict
 
@@ -18,6 +18,7 @@ from geniusweb.inform.YourTurn import YourTurn
 from geniusweb.issuevalue.Bid import Bid
 from geniusweb.issuevalue.Domain import Domain
 from geniusweb.issuevalue.Value import Value
+from geniusweb.issuevalue.ValueSet import ValueSet
 from geniusweb.party.Capabilities import Capabilities
 from geniusweb.party.DefaultParty import DefaultParty
 from geniusweb.profile.utilityspace.LinearAdditiveUtilitySpace import (
@@ -306,8 +307,33 @@ class TemplateAgent(DefaultParty):
             Bid: the next bid
         """
         alfa = 2 / (1 + math.exp((-1 * self.number_of_opponent_bids) / 27.307)) - 1
-        opponent_model: Dict[str, Value] = {}
-        issue_values: Dict[str, Value] = self.last_send_bid.getIssueValues()
-        return Bid(issue_values)
+
+        last_issue_values: Dict[str, Value] = self.last_send_bid.getIssueValues()
+        next_issue_values: Dict[str, Value] = last_issue_values
+
+        # for every issue there is a random chance that it will be assigned a random value in the next Bid
+        # based in the randomness value that belongs to the issue
+        for issue_name, value in next_issue_values:
+            randomness = self.randomness_values[issue_name]
+            if randomness < random.random():
+                next_issue_values[issue_name] = self.get_random_value_issue(issue_name)
+
+        return Bid(next_issue_values)
+
+    def get_random_value_issue(self, issue: str) -> Value:
+        """Gets a random value from an issue
+
+        Args:
+            issue (str): the issue in the domain from which a random value should be obtained
+
+        Returns:
+            Value: random value in the ValueSet of the issue
+        """
+        issue_value_set: ValueSet = self.domain.getValues(issue)
+        size: int = issue_value_set.size()
+        random_number: float = random.random()
+        random_index: int = math.floor(size * random_number)
+        return issue_value_set.get(random_index)
+
 
 
