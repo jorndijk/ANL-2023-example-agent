@@ -57,7 +57,7 @@ class TemplateAgent(DefaultParty):
         self.logger.log(logging.INFO, "party is initialized")
 
         # a dictionary containing randomness values for all issues in the domain
-        self.randomness_values: Dict[str, Decimal] = {}
+        self.weights: Dict[str, Dict[Value, Decimal]] = {}
         # number of bids our agent has sent
         self.number_of_agent_bids: int = 0
         # number of bids the opponent has sent
@@ -102,7 +102,7 @@ class TemplateAgent(DefaultParty):
 
             # get the individual weights for all issues from the agents profile
             # and calculate randomness values with them
-            self.initialise_randomness_values()
+            self.update_weights()
 
             profile_connection.close()
 
@@ -290,12 +290,15 @@ class TemplateAgent(DefaultParty):
 
         return score
 
-    def initialise_randomness_values(self):
+    def update_weights(self):
         """Fill randomness values dictionary using all issue weights
         """
-        issue_weights = self.profile.getWeights()
-        for issue_string, weight in issue_weights.items():
-            self.randomness_values[issue_string] = (1 - weight)
+        issues = self.profile.getDomain().getIssues()
+        for issue in issues:
+            values = self.profile.getDomain().getValues(issue)
+            total_weight = self.totalWeight(issue)
+            for value in values:
+                self.weights[issue][value] = self.getWeight(issue, value) / total_weight
 
     def create_first_bid(self) -> Bid:
         """Create the first bid containing all values that will give us the highest utility
@@ -377,5 +380,23 @@ class TemplateAgent(DefaultParty):
     def alpha(self):
         return 2 / (1 + math.e**(- self.number_of_opponent_bids / 27.307)) - 1
 
+    def totalWeight(self, issue):
+        """Gives the total weight of the two agents models of a specific issue
+        """
+        domain = self.profile.getDomain()
+        values = domain.getValues(issue)
+        total_weight = 0
+        for value in values:
+            total_weight += self.getWeight(issue, value)
+        return total_weight
 
-
+    def getWeight(self, issue, value):
+        """Gives the weight of an value in an issue
+        """
+        value_utilities = self.profile.getUtilities()
+        issueEstimator = self.opponent_model.issue_estimators.get(issue)
+        valueSet = value_utilities.get(issue)
+        our_utility = valueSet.getUtility(value)
+        opponent_utility = issueEstimator.get_value_utility(value)
+        weight = self.profile.getWeight(issue) * our_utility + self.our_concession_rate * issueEstimator.weight * opponent_utility
+        return weight
