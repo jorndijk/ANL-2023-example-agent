@@ -290,7 +290,7 @@ class TemplateAgent(DefaultParty):
     def initialise_randomness_values(self):
         """Fill randomness values dictionary using all issue weights
         """
-        issue_weights = self.profile.getWeight()
+        issue_weights = self.profile.getWeights()
         for issue_string, weight in issue_weights.items():
             self.randomness_values[issue_string] = (1 - weight)
 
@@ -302,9 +302,18 @@ class TemplateAgent(DefaultParty):
             Bid: the first bid of our agent
         """
         first_bid: Dict[str, Value] = {}
-        issue_utilities = self.profile.getUtilities
-        for issue_string, value in issue_utilities.items():
-            first_bid[issue_string] = value
+        domain = self.profile.getDomain()
+        value_utilities = self.profile.getUtilities()
+        for issue, valueSet in value_utilities.items():
+            values = domain.getValues(issue)
+            maxUtility = 0
+            maxValue = Value("valueA")
+            for value in values:
+                utility = valueSet.getUtility(value)
+                if utility > maxUtility:
+                    maxUtility = utility
+                    maxValue = value
+            first_bid[issue] = maxValue
         return Bid(first_bid)
 
     def calculate_next_bid(self) -> Bid:
