@@ -100,10 +100,6 @@ class TemplateAgent(DefaultParty):
             self.profile = profile_connection.getProfile()
             self.domain = self.profile.getDomain()
 
-            # get the individual weights for all issues from the agents profile
-            # and calculate randomness values with them
-            self.update_weights()
-
             profile_connection.close()
 
         # ActionDone informs you of an action (an offer or an accept)
@@ -201,6 +197,8 @@ class TemplateAgent(DefaultParty):
             # if so, accept the offer
             action = Accept(self.me, self.last_received_bid)
         else:
+            # update weights before making new bid
+            self.update_weights()
             # if not, find a bid to propose as counter offer
             bid = self.find_bid()
             # increase number of bids done by our agent
