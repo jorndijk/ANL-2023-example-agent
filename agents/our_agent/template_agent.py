@@ -64,8 +64,10 @@ class TemplateAgent(DefaultParty):
         self.number_of_opponent_bids: int = 0
         # last bid send by our agent
         self.last_send_bid: Bid = None
+        # concession rate of our agent
+        self.our_concession_rate = 0
         # concession rate opponent
-        self.concession_rate_opponent = 0
+        self.average_concession_rate_opponent = 0
         # list of predicted utilities of opponent from his bids
         self.utilities_opponent_bids = []
 
@@ -183,9 +185,10 @@ class TemplateAgent(DefaultParty):
             self.opponent_model.update(bid)
             # set bid as last received
             self.last_received_bid = bid
-            # add utility of last bid to list of utilities and update the concession rate of the opponent
+            # add utility of last bid to list of utilities and update the concession rate of the opponent and our agent
             self.utilities_opponent_bids.append(self.opponent_model.get_predicted_utility(bid))
-            self.update_concession_rate()
+            self.update_opponent_concession_rate()
+            self.update_our_concession_rate()
             # increase number of bids received by 1
             self.number_of_opponent_bids += 1
 
@@ -351,15 +354,28 @@ class TemplateAgent(DefaultParty):
         random_index: int = math.floor(size * random_number)
         return issue_value_set.get(random_index)
 
-    def update_concession_rate(self):
-        """Updates the concession rate of the opponent based on the utility of the last two bids
+    def update_opponent_concession_rate(self):
+        """Updates the concession rate of the opponent based on the average utility
         """
         utilities = self.utilities_opponent_bids
         number_of_utilities = len(utilities)
-        if number_of_utilities > 1:
-            new_concession = (utilities[number_of_utilities - 1] - utilities[number_of_utilities - 2]) \
-                             / utilities[number_of_utilities - 2]
-            self.concession_rate_opponent = new_concession
+        sum_of_difference = 0
+        for i in range(number_of_utilities - 1):
+            utility_difference = (utilities[i + 1] - utilities[i]) / utilities[i]
+            sum_of_difference += utility_difference
+        new_concession = sum_of_difference / (number_of_utilities - 1)
+        self.average_concession_rate_opponent = new_concession
+
+    def update_our_concession_rate(self):
+        """Updates the concession rate of our agent based on the alpha and the opponent concession rate
+        """
+        alpha = self.alpha()
+        opponent_rate = self.average_concession_rate_opponent
+        our_concession_rate = alpha / (1 + math.e**(2 * opponent_rate - 1)) - 0.25
+        self.our_concession_rate = our_concession_rate
+
+    def alpha(self):
+        return 2 / (1 + math.e**(- self.number_of_opponent_bids / 27.307)) - 1
 
 
 
