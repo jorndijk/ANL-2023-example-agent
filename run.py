@@ -22,13 +22,21 @@ settings = {
         #    "parameters": {"storage_dir": "agent_storage/DreamTeam109Agent"},
         #},
         {
-            "class": "agents.our_agent.template_agent.TemplateAgent",
-            "parameters": {"storage_dir": "agent_storage/TemplateAgent"},
+            "class": "agents.our_agent.template_agent.OurAgent",
+            "parameters": {"storage_dir": "agent_storage/OurAgent"},
         },
-{
-            "class": "agents.stupid_agent.stupid_agent.StupidAgent",
-            "parameters": {"storage_dir": "agent_storage/StupidAgent"},
+        {
+            "class": "agents.hardliner_agent.hardliner_agent.HardlinerAgent",
+            "parameters": {"storage_dir": "agent_storage/HardlinerAgent"},
         },
+        #{
+        #    "class": "agents.boulware_agent.boulware_agent.BoulwareAgent",
+        #    "parameters": {"storage_dir": "agent_storage/BoulwareAgent"},
+        #},
+        #{
+        #    "class": "agents.conceder_agent.conceder_agent.ConcederAgent",
+        #    "parameters": {"storage_dir": "agent_storage/ConcederAgent"},
+        #},
     ],
     "profiles": ["domains/domain00/profileA.json", "domains/domain00/profileB.json"],
     "deadline_time_ms": 10000,

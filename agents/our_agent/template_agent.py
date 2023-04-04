@@ -1,7 +1,7 @@
 import logging
 import math
 from decimal import Decimal
-from random import randint, random
+import random
 from time import time
 from typing import cast, Dict
 
@@ -34,7 +34,7 @@ from tudelft_utilities_logging.ReportToLogger import ReportToLogger
 from .utils.opponent_model import OpponentModel
 
 
-class TemplateAgent(DefaultParty):
+class OurAgent(DefaultParty):
     """
     Template of a Python geniusweb agent.
     """
@@ -200,12 +200,23 @@ class TemplateAgent(DefaultParty):
             # update weights before making new bid
             self.update_weights()
             # if not, find a bid to propose as counter offer
-            bid = self.find_bid()
+            best_bid = self.find_bid()
+            best_bid_score = self.profile.getUtility(best_bid)
+            for _ in range(30):
+                bid: Bid = self.find_bid()
+                utility = self.profile.getUtility(bid)
+                if utility > best_bid_score:
+                    best_bid_score = utility
+                    best_bid = bid
+            #last = self.last_received_bid
+            #if last != None:
+                #print(self.profile.getUtility(last))
+            #print(self.profile.getUtility(bid))
             # increase number of bids done by our agent
             self.number_of_agent_bids += 1
             # set last send bid to this bid
             self.last_send_bid = bid
-            action = Offer(self.me, bid)
+            action = Offer(self.me, best_bid)
 
         # send the action
         self.send_action(action)
@@ -243,23 +254,31 @@ class TemplateAgent(DefaultParty):
         domain = self.profile.getDomain()
         all_bids = AllBidsList(domain)
 
-        best_bid_score = 0.0
-        best_bid = None
+        bid: Dict[str, Value] = {}
 
         # if the first bid call function create_first_bid
         if self.number_of_agent_bids == 0:
-            best_bid = self.create_first_bid()
+            bid = self.create_first_bid()
 
         # if not the first bid
         else:
-            # take 500 attempts to find a bid according to a heuristic score
-            for _ in range(500):
-                bid = all_bids.get(randint(0, all_bids.size() - 1))
-                bid_score = self.score_bid(bid)
-                if bid_score > best_bid_score:
-                    best_bid_score, best_bid = bid_score, bid
-
-        return best_bid
+            weights = self.weights
+            #print(weights)
+            #print(weights)
+            for issue, values in weights.items():
+                random_number = random.random()
+                check_number = 0
+                #print(values.items())
+                #bid[issue] = random.choices(values.keys(), weights=values.values(), k=1)
+                for value, weight in values.items():
+                    check_number += weight
+                    if random_number < check_number:
+                        bid[issue] = value
+                        #print(value)
+                        break
+        #print(bid)
+        #print(self.profile.getUtility(Bid(bid)))
+        return Bid(bid)
 
     def score_bid(self, bid: Bid, alpha: float = 0.95, eps: float = 0.1) -> float:
         """Calculate heuristic score for a bid
@@ -296,7 +315,16 @@ class TemplateAgent(DefaultParty):
             values = self.profile.getDomain().getValues(issue)
             total_weight = self.totalWeight(issue)
             for value in values:
-                self.weights[issue][value] = self.getWeight(issue, value) / total_weight
+                if issue not in self.weights.keys():
+                    self.weights[issue] = {}
+                if total_weight <= 0:
+                    self.weights[issue][value] = 0
+                else:
+                    weight = self.getWeight(issue, value) / total_weight
+                    if weight < 0:
+                        self.weights[issue][value] = 0
+                    else:
+                        self.weights[issue][value] = weight
 
     def create_first_bid(self) -> Bid:
         """Create the first bid containing all values that will give us the highest utility
@@ -318,7 +346,7 @@ class TemplateAgent(DefaultParty):
                     maxUtility = utility
                     maxValue = value
             first_bid[issue] = maxValue
-        return Bid(first_bid)
+        return first_bid
 
     def calculate_next_bid(self) -> Bid:
         """Calculates the next bid
@@ -364,7 +392,9 @@ class TemplateAgent(DefaultParty):
         for i in range(number_of_utilities - 1):
             utility_difference = (utilities[i + 1] - utilities[i]) / utilities[i]
             sum_of_difference += utility_difference
-        new_concession = sum_of_difference / (number_of_utilities - 1)
+        new_concession = 0
+        if number_of_utilities > 1:
+            new_concession = sum_of_difference / (number_of_utilities - 1)
         self.average_concession_rate_opponent = new_concession
 
     def update_our_concession_rate(self):
@@ -372,8 +402,11 @@ class TemplateAgent(DefaultParty):
         """
         alpha = self.alpha()
         opponent_rate = self.average_concession_rate_opponent
-        our_concession_rate = alpha / (1 + math.e**(2 * opponent_rate - 1)) - 0.25
-        self.our_concession_rate = our_concession_rate
+        our_concession_rate = 0.1 / (1 + math.e**(2 * opponent_rate - 1)) - 0.25
+        if our_concession_rate < 0:
+            self.our_concession_rate = 0
+        else:
+            self.our_concession_rate = our_concession_rate
 
     def alpha(self):
         return 2 / (1 + math.e**(- self.number_of_opponent_bids / 27.307)) - 1
@@ -388,13 +421,19 @@ class TemplateAgent(DefaultParty):
             total_weight += self.getWeight(issue, value)
         return total_weight
 
-    def getWeight(self, issue, value):
+    def getWeight(self, issue, value) -> Decimal:
         """Gives the weight of an value in an issue
         """
+        # create opponent model if it was not yet initialised
+        if self.opponent_model is None:
+            self.opponent_model = OpponentModel(self.domain)
         value_utilities = self.profile.getUtilities()
         issueEstimator = self.opponent_model.issue_estimators.get(issue)
         valueSet = value_utilities.get(issue)
         our_utility = valueSet.getUtility(value)
         opponent_utility = issueEstimator.get_value_utility(value)
-        weight = self.profile.getWeight(issue) * our_utility + self.our_concession_rate * issueEstimator.weight * opponent_utility
-        return weight
+        weight = self.profile.getWeight(issue) * our_utility + Decimal(self.our_concession_rate * issueEstimator.weight * opponent_utility)
+        if weight < 0:
+            return 0
+        else:
+            return weight
