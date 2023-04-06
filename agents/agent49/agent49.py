@@ -197,7 +197,7 @@ class Agent49(DefaultParty):
                 self.maximum_received_utility = bid_value
             
             # Update the average received utility
-            if self.number_of_opponent_bids == 0:
+            if self.average_received_utility == 0:
                 self.average_received_utility = bid_value
             else:
                 self.average_received_utility = self.add_to_average(self.number_of_opponent_bids, bid_value)
@@ -206,32 +206,25 @@ class Agent49(DefaultParty):
         """This method is called when it is our turn. It should decide upon an action
         to perform and send this action to the opponent.
         """
-        # Start by creating a bid to propose as offer
-        our_bid = self.find_bid()
+        # Start by creating the best bid to propose as offer
+        self.update_weights()
+        best_bid = self.find_bid()
+        best_bid_score = self.profile.getUtility(best_bid)
+        for _ in range(15):
+            bid = self.find_bid()
+            utility = self.profile.getUtility(bid)
+            if utility > best_bid_score:
+                best_bid_score = utility
+                best_bid = bid
         # Check if the last received offer is good enough
         # If so, accept the offer
-        if self.accept_condition(self.last_received_bid, our_bid):
+        if self.accept_condition(best_bid, self.last_received_bid):
             action = Accept(self.me, self.last_received_bid)
         else:
-            # update weights before making new bid
-            self.update_weights()
-            # if not, find a bid to propose as counter offer
-            best_bid = self.find_bid()
-            best_bid_score = self.profile.getUtility(best_bid)
-            for _ in range(15):
-                bid: Bid = self.find_bid()
-                utility = self.profile.getUtility(bid)
-                if utility > best_bid_score:
-                    best_bid_score = utility
-                    best_bid = bid
-            #last = self.last_received_bid
-            #if last != None:
-                #print(self.profile.getUtility(last))
-            #print(self.profile.getUtility(bid))
             # increase number of bids done by our agent
             self.number_of_agent_bids += 1
             # set last send bid to this bid
-            self.last_send_bid = bid
+            self.last_send_bid = best_bid
             action = Offer(self.me, best_bid)
 
         # send the action
@@ -254,6 +247,8 @@ class Agent49(DefaultParty):
         if last_received_bid is None:
             return False
         
+        # our_bid_value = 0
+        # if our_bid is not None:
         our_bid_value = self.profile.getUtility(our_bid)
         opponent_bid_value = self.profile.getUtility(last_received_bid)
 
@@ -411,7 +406,7 @@ class Agent49(DefaultParty):
         """
         alpha = self.alpha()
         opponent_rate = self.average_concession_rate_opponent
-        print(opponent_rate)
+        # print(opponent_rate)
         #our_concession_rate = 1 / (1 + math.e**(2 * opponent_rate - 1)) - 0.25
         our_concession_rate = alpha * (-opponent_rate + 1)
         if our_concession_rate < 0:
@@ -452,4 +447,4 @@ class Agent49(DefaultParty):
             return weight
 
     def add_to_average(self, size: int, utility: Decimal) -> Decimal:
-        (size * self.average_received_utility + utility) / (size + 1)
+        return (size * self.average_received_utility + utility) / (size + 1)
