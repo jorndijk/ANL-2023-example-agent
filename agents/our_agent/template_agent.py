@@ -202,7 +202,7 @@ class OurAgent(DefaultParty):
             # if not, find a bid to propose as counter offer
             best_bid = self.find_bid()
             best_bid_score = self.profile.getUtility(best_bid)
-            for _ in range(30):
+            for _ in range(5):
                 bid: Bid = self.find_bid()
                 utility = self.profile.getUtility(bid)
                 if utility > best_bid_score:
@@ -355,8 +355,8 @@ class OurAgent(DefaultParty):
             Bid: the next bid
         """
         alfa = 2 / (1 + math.exp((-1 * self.number_of_opponent_bids) / 27.307)) - 1
-
         last_issue_values: Dict[str, Value] = self.last_send_bid.getIssueValues()
+
         next_issue_values: Dict[str, Value] = last_issue_values
 
         # for every issue there is a random chance that it will be assigned a random value in the next Bid
