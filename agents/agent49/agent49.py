@@ -199,7 +199,7 @@ class Agent49(DefaultParty):
             # if not, find a bid to propose as counter offer
             best_bid = self.find_bid()
             best_bid_score = self.profile.getUtility(best_bid)
-            for _ in range(15):
+            for _ in range(30):
                 bid: Bid = self.find_bid()
                 utility = self.profile.getUtility(bid)
                 if utility > best_bid_score:
@@ -364,10 +364,11 @@ class Agent49(DefaultParty):
         """Updates the concession rate of the opponent based on the average utility
         """
         utilities = self.utilities_opponent_bids
+        utilities = utilities[:-10]
         number_of_utilities = len(utilities)
         sum_of_difference = 0
         for i in range(number_of_utilities - 1):
-            utility_difference = (utilities[i + 1] - utilities[i]) / utilities[i]
+            utility_difference = 500 * (utilities[i + 1] - utilities[i]) / utilities[i]
             sum_of_difference += utility_difference
         new_concession = 0
         if number_of_utilities > 1:
@@ -379,7 +380,6 @@ class Agent49(DefaultParty):
         """
         alpha = self.alpha()
         opponent_rate = self.average_concession_rate_opponent
-        print(opponent_rate)
         #our_concession_rate = 1 / (1 + math.e**(2 * opponent_rate - 1)) - 0.25
         our_concession_rate = alpha * (-opponent_rate + 1)
         if our_concession_rate < 0:
@@ -413,7 +413,7 @@ class Agent49(DefaultParty):
         valueSet = value_utilities.get(issue)
         our_utility = valueSet.getUtility(value)
         opponent_utility = issueEstimator.get_value_utility(value)
-        weight = self.profile.getWeight(issue) * our_utility + Decimal(self.our_concession_rate * issueEstimator.weight * opponent_utility)
+        weight = Decimal(1 - self.our_concession_rate) * self.profile.getWeight(issue) * our_utility + Decimal(self.our_concession_rate * issueEstimator.weight * opponent_utility)
         if weight < 0:
             return 0
         else:
