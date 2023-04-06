@@ -1,4 +1,5 @@
 import logging
+import sys
 from decimal import Decimal
 from random import randint
 from time import time
@@ -56,7 +57,13 @@ class TemplateAgent(DefaultParty):
 
         # a dictionary containing randomness values for all issues in the domain
         self.randomness_values: Dict[str, Decimal] = {}
+
+        # Keep track of the amount of bids offered and received 
+        # and the average and maximum utility received
         self.number_of_bids: int = 0
+        self.number_of_opponent_bids: int = 0
+        self.maximum_received_utility: Decimal = (Decimal)(-sys.maxsize)
+        self.average_received_utility: Decimal = 0
 
     def notifyChange(self, data: Inform):
         """MUST BE IMPLEMENTED
@@ -166,26 +173,38 @@ class TemplateAgent(DefaultParty):
                 self.opponent_model = OpponentModel(self.domain)
 
             bid = cast(Offer, action).getBid()
+            bid_value = self.profile.getUtility(bid)
 
             # update opponent model with bid
             self.opponent_model.update(bid)
             # set bid as last received
             self.last_received_bid = bid
 
+            # Set the new maximum received utility
+            if bid_value > self.maximum_received_utility:
+                self.maximum_received_utility = bid_value
+            
+            # Update the average received utility
+            if self.number_of_opponent_bids == 0:
+                self.average_received_utility = bid_value
+            else:
+                self.average_received_utility = self.add_to_average(self.number_of_opponent_bids, bid_value)
+
     def my_turn(self):
         """This method is called when it is our turn. It should decide upon an action
         to perform and send this action to the opponent.
         """
-        # check if the last received offer is good enough
-        if self.accept_condition(self.last_received_bid):
-            # if so, accept the offer
+        # Start by creating a bid to propose as offer
+        our_bid = self.find_bid()
+        # Check if the last received offer is good enough
+        # If so, accept the offer
+        if self.accept_condition(self.last_received_bid, our_bid):
             action = Accept(self.me, self.last_received_bid)
         else:
-            # if not, find a bid to propose as counter offer
-            bid = self.find_bid()
+            # If not, propose the counter offer
             # increase number of bids done by our agent
             self.number_of_bids += 1
-            action = Offer(self.me, bid)
+            action = Offer(self.me, our_bid)
 
         # send the action
         self.send_action(action)
@@ -203,20 +222,33 @@ class TemplateAgent(DefaultParty):
     ################################## Example methods below ##################################
     ###########################################################################################
 
-    def accept_condition(self, bid: Bid) -> bool:
-        if bid is None:
+    def accept_condition(self, our_bid: Bid, last_received_bid: Bid) -> bool:
+        if last_received_bid is None:
             return False
+        
+        our_bid_value = self.profile.getUtility(our_bid)
+        opponent_bid_value = self.profile.getUtility(last_received_bid)
 
         # progress of the negotiation session between 0 and 1 (1 is deadline)
         progress = self.progress.get(time() * 1000)
 
-        # very basic approach that accepts if the offer is valued above 0.7 and
-        # 95% of the time towards the deadline has passed
-        conditions = [
-            self.profile.getUtility(bid) > 0.8,
-            progress > 0.95,
-        ]
-        return all(conditions)
+        # Accept condition: ACconst(β) ∧ (ACtime(0.99) ∨ (ACnext ∧ ACtime(0.5))). So:
+        # If the offer is valued above the average/maximum value AND
+        # (If 99% of the time towards the deadline has passed OR
+        # (The offer is valued above our offers value AND 
+        # 50% of the time towards the deadline has pased))
+
+        # Can be changed to maximum received utility instead of average
+        if opponent_bid_value > self.average_received_utility:
+            if progress > 0.99:
+                return True
+            else:
+                if opponent_bid_value > our_bid_value and progress > 0.5:
+                    return True
+                else:
+                    return False
+        else:
+            return False
 
     def find_bid(self) -> Bid:
         # compose a list of all possible bids
@@ -287,5 +319,8 @@ class TemplateAgent(DefaultParty):
         for issue_string, value in issue_utilities.items():
             first_bid[issue_string] = value
         return Bid(first_bid)
+    
+    def add_to_average(self, size: int, utility: Decimal) -> Decimal:
+        (size * self.average_received_utility + utility) / (size + 1)
 
 
