@@ -22,17 +22,17 @@ settings = {
         #    "parameters": {"storage_dir": "agent_storage/DreamTeam109Agent"},
         #},
         {
-            "class": "agents.our_agent.template_agent.OurAgent",
-            "parameters": {"storage_dir": "agent_storage/OurAgent"},
+            "class": "agents.agent49.agent49.Agent49",
+            "parameters": {"storage_dir": "agent_storage/Agent49"},
         },
+        # {
+        #     "class": "agents.hardliner_agent.hardliner_agent.HardlinerAgent",
+        #     "parameters": {"storage_dir": "agent_storage/HardlinerAgent"},
+        # },
         {
-            "class": "agents.hardliner_agent.hardliner_agent.HardlinerAgent",
-            "parameters": {"storage_dir": "agent_storage/HardlinerAgent"},
+           "class": "agents.boulware_agent.boulware_agent.BoulwareAgent",
+           "parameters": {"storage_dir": "agent_storage/BoulwareAgent"},
         },
-        #{
-        #    "class": "agents.boulware_agent.boulware_agent.BoulwareAgent",
-        #    "parameters": {"storage_dir": "agent_storage/BoulwareAgent"},
-        #},
         #{
         #    "class": "agents.conceder_agent.conceder_agent.ConcederAgent",
         #    "parameters": {"storage_dir": "agent_storage/ConcederAgent"},

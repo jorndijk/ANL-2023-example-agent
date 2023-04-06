@@ -34,7 +34,7 @@ from tudelft_utilities_logging.ReportToLogger import ReportToLogger
 from .utils.opponent_model import OpponentModel
 
 
-class OurAgent(DefaultParty):
+class Agent49(DefaultParty):
     """
     Template of a Python geniusweb agent.
     """
