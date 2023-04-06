@@ -129,9 +129,6 @@ class Agent49(DefaultParty):
         else:
             self.logger.log(logging.WARNING, "Ignoring unknown info " + str(data))
 
-
-
-
     def getCapabilities(self) -> Capabilities:
         """MUST BE IMPLEMENTED
         Method to indicate to the protocol what the capabilities of this agent are.
@@ -202,7 +199,7 @@ class Agent49(DefaultParty):
             # if not, find a bid to propose as counter offer
             best_bid = self.find_bid()
             best_bid_score = self.profile.getUtility(best_bid)
-            for _ in range(30):
+            for _ in range(15):
                 bid: Bid = self.find_bid()
                 utility = self.profile.getUtility(bid)
                 if utility > best_bid_score:
@@ -348,26 +345,6 @@ class Agent49(DefaultParty):
             first_bid[issue] = maxValue
         return first_bid
 
-    def calculate_next_bid(self) -> Bid:
-        """Calculates the next bid
-
-        Returns:
-            Bid: the next bid
-        """
-        alfa = 2 / (1 + math.exp((-1 * self.number_of_opponent_bids) / 27.307)) - 1
-
-        last_issue_values: Dict[str, Value] = self.last_send_bid.getIssueValues()
-        next_issue_values: Dict[str, Value] = last_issue_values
-
-        # for every issue there is a random chance that it will be assigned a random value in the next Bid
-        # based in the randomness value that belongs to the issue
-        for issue_name, value in next_issue_values:
-            randomness = self.randomness_values[issue_name]
-            if randomness < random.random():
-                next_issue_values[issue_name] = self.get_random_value_issue(issue_name)
-
-        return Bid(next_issue_values)
-
     def get_random_value_issue(self, issue: str) -> Value:
         """Gets a random value from an issue
 
@@ -402,14 +379,18 @@ class Agent49(DefaultParty):
         """
         alpha = self.alpha()
         opponent_rate = self.average_concession_rate_opponent
-        our_concession_rate = 0.1 / (1 + math.e**(2 * opponent_rate - 1)) - 0.25
+        print(opponent_rate)
+        #our_concession_rate = 1 / (1 + math.e**(2 * opponent_rate - 1)) - 0.25
+        our_concession_rate = alpha * (-opponent_rate + 1)
         if our_concession_rate < 0:
             self.our_concession_rate = 0
+        if our_concession_rate > 1:
+            self.our_concession_rate = 1
         else:
             self.our_concession_rate = our_concession_rate
 
     def alpha(self):
-        return 2 / (1 + math.e**(- self.number_of_opponent_bids / 27.307)) - 1
+        return 2 / (1 + math.e**(- self.number_of_opponent_bids / 270.307)) - 1
 
     def totalWeight(self, issue):
         """Gives the total weight of the two agents models of a specific issue
