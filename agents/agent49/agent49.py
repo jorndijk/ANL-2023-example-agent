@@ -164,7 +164,7 @@ class Agent49(DefaultParty):
         Returns:
             str: Agent description
         """
-        return "Template agent for the ANL 2022 competition"
+        return "Group 49 agent for the ANL 2022 competition"
 
     def opponent_action(self, action):
         """Process an action that was received from the opponent.
