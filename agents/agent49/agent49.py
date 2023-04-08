@@ -1,4 +1,5 @@
 import logging
+import sys
 import math
 from decimal import Decimal
 import random
@@ -57,6 +58,11 @@ class Agent49(DefaultParty):
         self.logger.log(logging.INFO, "party is initialized")
 
         # a dictionary containing randomness values for all issues in the domain
+        self.randomness_values: Dict[str, Decimal] = {}
+
+        # Average and maximum utility received
+        self.maximum_received_utility: Decimal = (Decimal)(-sys.maxsize)
+        self.average_received_utility: Decimal = 0
         self.weights: Dict[str, Dict[Value, Decimal]] = {}
         # number of bids our agent has sent
         self.number_of_agent_bids: int = 0
@@ -173,6 +179,7 @@ class Agent49(DefaultParty):
                 self.opponent_model = OpponentModel(self.domain)
 
             bid = cast(Offer, action).getBid()
+            bid_value = self.profile.getUtility(bid)
 
             # update opponent model with bid
             self.opponent_model.update(bid)
@@ -185,34 +192,39 @@ class Agent49(DefaultParty):
             # increase number of bids received by 1
             self.number_of_opponent_bids += 1
 
+            # Set the new maximum received utility
+            if bid_value > self.maximum_received_utility:
+                self.maximum_received_utility = bid_value
+            
+            # Update the average received utility
+            if self.average_received_utility == 0:
+                self.average_received_utility = bid_value
+            else:
+                self.average_received_utility = self.add_to_average(self.number_of_opponent_bids, bid_value)
+
     def my_turn(self):
         """This method is called when it is our turn. It should decide upon an action
         to perform and send this action to the opponent.
         """
-        # check if the last received offer is good enough
-        if self.accept_condition(self.last_received_bid):
-            # if so, accept the offer
+        # Start by creating the best bid to propose as offer
+        self.update_weights()
+        best_bid = self.find_bid()
+        best_bid_score = self.profile.getUtility(best_bid)
+        for _ in range(15):
+            bid = self.find_bid()
+            utility = self.profile.getUtility(bid)
+            if utility > best_bid_score:
+                best_bid_score = utility
+                best_bid = bid
+        # Check if the last received offer is good enough
+        # If so, accept the offer
+        if self.accept_condition(best_bid, self.last_received_bid):
             action = Accept(self.me, self.last_received_bid)
         else:
-            # update weights before making new bid
-            self.update_weights()
-            # if not, find a bid to propose as counter offer
-            best_bid = self.find_bid()
-            best_bid_score = self.profile.getUtility(best_bid)
-            for _ in range(30):
-                bid: Bid = self.find_bid()
-                utility = self.profile.getUtility(bid)
-                if utility > best_bid_score:
-                    best_bid_score = utility
-                    best_bid = bid
-            #last = self.last_received_bid
-            #if last != None:
-                #print(self.profile.getUtility(last))
-            #print(self.profile.getUtility(bid))
             # increase number of bids done by our agent
             self.number_of_agent_bids += 1
             # set last send bid to this bid
-            self.last_send_bid = bid
+            self.last_send_bid = best_bid
             action = Offer(self.me, best_bid)
 
         # send the action
@@ -231,20 +243,35 @@ class Agent49(DefaultParty):
     ################################## Example methods below ##################################
     ###########################################################################################
 
-    def accept_condition(self, bid: Bid) -> bool:
-        if bid is None:
+    def accept_condition(self, our_bid: Bid, last_received_bid: Bid) -> bool:
+        if last_received_bid is None:
             return False
+        
+        # our_bid_value = 0
+        # if our_bid is not None:
+        our_bid_value = self.profile.getUtility(our_bid)
+        opponent_bid_value = self.profile.getUtility(last_received_bid)
 
         # progress of the negotiation session between 0 and 1 (1 is deadline)
         progress = self.progress.get(time() * 1000)
 
-        # very basic approach that accepts if the offer is valued above 0.7 and
-        # 95% of the time towards the deadline has passed
-        conditions = [
-            self.profile.getUtility(bid) > 0.8,
-            progress > 0.95,
-        ]
-        return all(conditions)
+        # Accept condition: ACconst(β) ∧ (ACtime(0.99) ∨ (ACnext ∧ ACtime(0.5))). So:
+        # If the offer is valued above the average/maximum value AND
+        # (If 99% of the time towards the deadline has passed OR
+        # (The offer is valued above our offers value AND 
+        # 50% of the time towards the deadline has pased))
+
+        # Can be changed to maximum received utility instead of average
+        if opponent_bid_value > self.average_received_utility:
+            if progress > 0.99:
+                return True
+            else:
+                if opponent_bid_value > our_bid_value and progress > 0.5:
+                    return True
+                else:
+                    return False
+        else:
+            return False
 
     def find_bid(self) -> Bid:
         # compose a list of all possible bids
@@ -418,3 +445,6 @@ class Agent49(DefaultParty):
             return 0
         else:
             return weight
+
+    def add_to_average(self, size: int, utility: Decimal) -> Decimal:
+        return (size * self.average_received_utility + utility) / (size + 1)
