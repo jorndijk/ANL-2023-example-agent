@@ -57,9 +57,6 @@ class Group49Agent(DefaultParty):
         self.opponent_model: OpponentModel = None
         self.logger.log(logging.INFO, "party is initialized")
 
-        # a dictionary containing randomness values for all issues in the domain
-        self.randomness_values: Dict[str, Decimal] = {}
-
         # Average and maximum utility received
         self.maximum_received_utility: Decimal = (Decimal)(-sys.maxsize)
         self.average_received_utility: Decimal = 0
@@ -72,6 +69,11 @@ class Group49Agent(DefaultParty):
         self.last_send_bid: Bid = None
         # concession rate of our agent
         self.our_concession_rate = 0
+        self.max_concession_rate = 0
+        self.min_concession_rate = 0
+        # How much to change concession rate by every time
+        self.adapting_rate = 0.001
+        self.randomness = 0.02
         # concession rate opponent
         self.average_concession_rate_opponent = 0
         # list of predicted utilities of opponent from his bids
@@ -208,24 +210,33 @@ class Group49Agent(DefaultParty):
         """This method is called when it is our turn. It should decide upon an action
         to perform and send this action to the opponent.
         """
+
         # Start by creating the best bid to propose as offer
         self.update_weights()
-        best_bid = self.find_bid()
-        best_bid_score = self.profile.getUtility(best_bid)
-        for _ in range(15):
+        best_bid = None
+        best_bid_score = 0
+        min_rate = self.min_concession_rate
+        if min_rate >= 0: min_rate += 0.025
+        max_rate = self.max_concession_rate
+        prev_bid = self.last_send_bid
+        if prev_bid == None:
+            prev_bid = Bid(self.create_first_bid())
+        old_utility = 1
+        old_utility = self.profile.getUtility(prev_bid)
+        for _ in range(50):
             bid = self.find_bid()
             utility = self.profile.getUtility(bid)
-            if utility > best_bid_score and utility > self.reservation_value:
+            utility_change = utility - old_utility
+            if utility > best_bid_score and utility_change <= min_rate + self.randomness and utility_change >= max_rate - self.randomness:
                 best_bid_score = utility
                 best_bid = bid
         # Check if the last received offer is good enough
         # If so, accept the offer
+        if best_bid == None:
+            best_bid = self.last_send_bid
         if self.accept_condition(best_bid, self.last_received_bid):
             action = Accept(self.me, self.last_received_bid)
         else:
-            # If score is under reservation value send previous bid
-            if best_bid_score < self.reservation_value:
-                best_bid = self.last_send_bid
             # increase number of bids done by our agent
             self.number_of_agent_bids += 1
             # set last send bid to this bid
@@ -269,7 +280,7 @@ class Group49Agent(DefaultParty):
         # Can be changed to maximum received utility instead of average
         # These conditions must always be true
         reservation_conditions = [
-            our_bid_value > 0.4,
+            opponent_bid_value > 0.4,
             progress > 0.9
         ]
         # Only one condition has to be true
@@ -377,22 +388,8 @@ class Group49Agent(DefaultParty):
                     maxUtility = utility
                     maxValue = value
             first_bid[issue] = maxValue
+        self.last_send_bid = Bid(first_bid)
         return first_bid
-
-    def get_random_value_issue(self, issue: str) -> Value:
-        """Gets a random value from an issue
-
-        Args:
-            issue (str): the issue in the domain from which a random value should be obtained
-
-        Returns:
-            Value: random value in the ValueSet of the issue
-        """
-        issue_value_set: ValueSet = self.domain.getValues(issue)
-        size: int = issue_value_set.size()
-        random_number: float = random.random()
-        random_index: int = math.floor(size * random_number)
-        return issue_value_set.get(random_index)
 
     def update_opponent_concession_rate(self):
         """Updates the concession rate of the opponent based on the average utility
@@ -422,6 +419,17 @@ class Group49Agent(DefaultParty):
             self.our_concession_rate = 1
         else:
             self.our_concession_rate = our_concession_rate
+
+        # Min and max concession rates
+        progress = self.progress.get(time() * 1000)
+        # Opponent based change
+        opponent_rate_change = -0.1 * opponent_rate
+        # Time based change
+        time_passed_change = -0.1 * progress + 0.02
+        min_concession_rate = self.min_concession_rate + self.adapting_rate * alpha * (opponent_rate_change + time_passed_change)
+        self.min_concession_rate = max(min_concession_rate, -0.025)
+        if(min_concession_rate < 0):
+            self.max_concession_rate = self.min_concession_rate - 0.025
 
     def alpha(self):
         return 2 / (1 + math.e**(- self.number_of_opponent_bids / 270.307)) - 1
