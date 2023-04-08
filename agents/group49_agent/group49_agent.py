@@ -35,7 +35,7 @@ from tudelft_utilities_logging.ReportToLogger import ReportToLogger
 from .utils.opponent_model import OpponentModel
 
 
-class Agent49(DefaultParty):
+class Group49Agent(DefaultParty):
     """
     Template of a Python geniusweb agent.
     """
@@ -76,6 +76,8 @@ class Agent49(DefaultParty):
         self.average_concession_rate_opponent = 0
         # list of predicted utilities of opponent from his bids
         self.utilities_opponent_bids = []
+        # Bids under this value are not sent nor accepted
+        self.reservation_value = 0.4
 
 
     def notifyChange(self, data: Inform):
@@ -213,7 +215,7 @@ class Agent49(DefaultParty):
         for _ in range(15):
             bid = self.find_bid()
             utility = self.profile.getUtility(bid)
-            if utility > best_bid_score:
+            if utility > best_bid_score and utility > self.reservation_value:
                 best_bid_score = utility
                 best_bid = bid
         # Check if the last received offer is good enough
@@ -221,6 +223,9 @@ class Agent49(DefaultParty):
         if self.accept_condition(best_bid, self.last_received_bid):
             action = Accept(self.me, self.last_received_bid)
         else:
+            # If score is under reservation value send previous bid
+            if best_bid_score < self.reservation_value:
+                best_bid = self.last_send_bid
             # increase number of bids done by our agent
             self.number_of_agent_bids += 1
             # set last send bid to this bid
@@ -262,16 +267,18 @@ class Agent49(DefaultParty):
         # 50% of the time towards the deadline has pased))
 
         # Can be changed to maximum received utility instead of average
-        if opponent_bid_value > self.average_received_utility:
-            if progress > 0.99:
-                return True
-            else:
-                if opponent_bid_value > our_bid_value and progress > 0.5:
-                    return True
-                else:
-                    return False
-        else:
-            return False
+        # These conditions must always be true
+        reservation_conditions = [
+            our_bid_value > 0.4,
+            progress > 0.9
+        ]
+        # Only one condition has to be true
+        one_condition = [
+            opponent_bid_value > self.maximum_received_utility and progress > 0.99,
+            #opponent_bid_value > our_bid_value
+        ]
+        condition = all(reservation_conditions) and any(one_condition)
+        return condition
 
     def find_bid(self) -> Bid:
         # compose a list of all possible bids

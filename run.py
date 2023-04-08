@@ -22,21 +22,25 @@ settings = {
         #    "parameters": {"storage_dir": "agent_storage/DreamTeam109Agent"},
         #},
         {
-            "class": "agents.agent49.agent49.Agent49",
-            "parameters": {"storage_dir": "agent_storage/Agent49"},
+            "class": "agents.group49_agent.group49_agent.Group49Agent",
+            "parameters": {"storage_dir": "agent_storage/Group49Agent"},
         },
+        # {
+        #     "class": "agents.group49_agent.group49_agent.Group49Agent",
+        #     "parameters": {"storage_dir": "agent_storage/Group49Agent"},
+        # },
         # {
         #     "class": "agents.hardliner_agent.hardliner_agent.HardlinerAgent",
         #     "parameters": {"storage_dir": "agent_storage/HardlinerAgent"},
         # },
+        # {
+        #    "class": "agents.boulware_agent.boulware_agent.BoulwareAgent",
+        #    "parameters": {"storage_dir": "agent_storage/BoulwareAgent"},
+        # },
         {
-           "class": "agents.boulware_agent.boulware_agent.BoulwareAgent",
-           "parameters": {"storage_dir": "agent_storage/BoulwareAgent"},
+           "class": "agents.conceder_agent.conceder_agent.ConcederAgent",
+           "parameters": {"storage_dir": "agent_storage/ConcederAgent"},
         },
-        #{
-        #    "class": "agents.conceder_agent.conceder_agent.ConcederAgent",
-        #    "parameters": {"storage_dir": "agent_storage/ConcederAgent"},
-        #},
     ],
     "profiles": ["domains/domain00/profileA.json", "domains/domain00/profileB.json"],
     "deadline_time_ms": 10000,
