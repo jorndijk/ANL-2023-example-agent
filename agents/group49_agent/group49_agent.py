@@ -82,6 +82,8 @@ class Group49Agent(DefaultParty):
         self.utilities_opponent_bids = []
         # Bids under this value are not sent nor accepted
         self.reservation_values = []
+        # Used for getting towards the Nash product
+        self.currProduct = 0
 
 
     def notifyChange(self, data: Inform):
@@ -218,6 +220,7 @@ class Group49Agent(DefaultParty):
         self.update_weights()
         best_bid = None
         best_bid_score = 0
+        best_product = 0
         min_rate = self.min_concession_rate
         if min_rate >= 0: min_rate += 0.025
         max_rate = self.max_concession_rate
@@ -230,9 +233,15 @@ class Group49Agent(DefaultParty):
             bid = self.find_bid()
             utility = self.profile.getUtility(bid)
             utility_change = utility - old_utility
-            if utility > best_bid_score and utility_change <= min_rate + self.randomness and utility_change >= max_rate - self.randomness and self.above_reservation_value(bid):
+            product = 0
+            if self.last_received_bid == None:
+                product = 0
+            else:
+                product = self.utilityProduct(bid, self.last_received_bid)
+            if utility > best_bid_score and utility_change <= min_rate + self.randomness and utility_change >= max_rate - self.randomness and self.above_reservation_value(bid) and product >= best_product:
                 best_bid_score = utility
                 best_bid = bid
+                best_product = product
         # Check if the last received offer is good enough
         # If so, accept the offer
         if best_bid == None:
@@ -242,6 +251,7 @@ class Group49Agent(DefaultParty):
             best_bid = self.maximum_received_bid
 
         if self.accept_condition(best_bid, self.last_received_bid):
+            self.currProduct = best_product
             action = Accept(self.me, self.last_received_bid)
         else:
             # increase number of bids done by our agent
@@ -471,6 +481,9 @@ class Group49Agent(DefaultParty):
 
     def add_to_average(self, size: int, utility: Decimal) -> Decimal:
         return (size * self.average_received_utility + utility) / (size + 1)
+    
+    def utilityProduct(self, our_bid: Bid, opponent_bid: Bid) -> Decimal:
+        return self.profile.getUtility(our_bid) * self.profile.getUtility(opponent_bid)
 
     def above_reservation_value(self, bid: Bid) -> bool:
         weights = self.profile.getWeights()
