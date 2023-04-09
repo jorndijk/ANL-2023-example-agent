@@ -59,6 +59,7 @@ class Group49Agent(DefaultParty):
 
         # Average and maximum utility received
         self.maximum_received_utility: Decimal = (Decimal)(-sys.maxsize)
+        self.maximum_received_bid: Bid = None
         self.average_received_utility: Decimal = 0
         self.weights: Dict[str, Dict[Value, Decimal]] = {}
         # number of bids our agent has sent
@@ -74,12 +75,13 @@ class Group49Agent(DefaultParty):
         # How much to change concession rate by every time
         self.adapting_rate = 0.001
         self.randomness = 0.02
+        self.issue_flexibility = 0.1
         # concession rate opponent
         self.average_concession_rate_opponent = 0
         # list of predicted utilities of opponent from his bids
         self.utilities_opponent_bids = []
         # Bids under this value are not sent nor accepted
-        self.reservation_value = 0.4
+        self.reservation_values = []
 
 
     def notifyChange(self, data: Inform):
@@ -199,6 +201,7 @@ class Group49Agent(DefaultParty):
             # Set the new maximum received utility
             if bid_value > self.maximum_received_utility:
                 self.maximum_received_utility = bid_value
+                self.maximum_received_bid = bid
             
             # Update the average received utility
             if self.average_received_utility == 0:
@@ -227,13 +230,17 @@ class Group49Agent(DefaultParty):
             bid = self.find_bid()
             utility = self.profile.getUtility(bid)
             utility_change = utility - old_utility
-            if utility > best_bid_score and utility_change <= min_rate + self.randomness and utility_change >= max_rate - self.randomness:
+            if utility > best_bid_score and utility_change <= min_rate + self.randomness and utility_change >= max_rate - self.randomness and self.above_reservation_value(bid):
                 best_bid_score = utility
                 best_bid = bid
         # Check if the last received offer is good enough
         # If so, accept the offer
         if best_bid == None:
             best_bid = self.last_send_bid
+            best_bid_score = old_utility
+        if self.maximum_received_bid != None and self.maximum_received_utility > old_utility:
+            best_bid = self.maximum_received_bid
+
         if self.accept_condition(best_bid, self.last_received_bid):
             action = Accept(self.me, self.last_received_bid)
         else:
@@ -279,16 +286,17 @@ class Group49Agent(DefaultParty):
 
         # Can be changed to maximum received utility instead of average
         # These conditions must always be true
+        higherThanBase = True
+        if self.profile.getReservationBid():
+            higherThanBase = self.profile.isPreferredOrEqual(last_received_bid, self.profile.getReservationBid())
+
         reservation_conditions = [
-            opponent_bid_value > 0.4,
-            progress > 0.9
+            progress > 0.9,
+            self.above_reservation_value(last_received_bid) or (higherThanBase and progress > 0.98),
+            opponent_bid_value > self.maximum_received_utility - Decimal(0.1)
         ]
-        # Only one condition has to be true
-        one_condition = [
-            opponent_bid_value > self.maximum_received_utility and progress > 0.99,
-            #opponent_bid_value > our_bid_value
-        ]
-        condition = all(reservation_conditions) and any(one_condition)
+
+        condition = all(reservation_conditions)
         return condition
 
     def find_bid(self) -> Bid:
@@ -463,3 +471,10 @@ class Group49Agent(DefaultParty):
 
     def add_to_average(self, size: int, utility: Decimal) -> Decimal:
         return (size * self.average_received_utility + utility) / (size + 1)
+
+    def above_reservation_value(self, bid: Bid) -> bool:
+        weights = self.profile.getWeights()
+        for iss in self.profile.getWeights():
+            if self.profile.getUtilities().get(iss).getUtility(bid.getIssueValues()[iss]) - Decimal(self.issue_flexibility) < weights[iss]:
+                return False
+        return True
