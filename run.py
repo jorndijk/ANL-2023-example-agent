@@ -22,6 +22,9 @@ settings = {
             "parameters": {"storage_dir": "agent_storage/Group49Agent"},
         },
         # {
+        #     "class": "agents.CSE3210.agent29.agent29.Agent29",
+        # },
+        # {
         #    "class": "agents.ANL2022.dreamteam109_agent.dreamteam109_agent.DreamTeam109Agent",
         #    "parameters": {"storage_dir": "agent_storage/DreamTeam109Agent"},
         # },
@@ -33,10 +36,10 @@ settings = {
         #     "class": "agents.hardliner_agent.hardliner_agent.HardlinerAgent",
         #     "parameters": {"storage_dir": "agent_storage/HardlinerAgent"},
         # },
-        {
-           "class": "agents.boulware_agent.boulware_agent.BoulwareAgent",
-           "parameters": {"storage_dir": "agent_storage/BoulwareAgent"},
-        },
+        # {
+        #    "class": "agents.boulware_agent.boulware_agent.BoulwareAgent",
+        #    "parameters": {"storage_dir": "agent_storage/BoulwareAgent"},
+        # },
         # {
         #    "class": "agents.conceder_agent.conceder_agent.ConcederAgent",
         #    "parameters": {"storage_dir": "agent_storage/ConcederAgent"},

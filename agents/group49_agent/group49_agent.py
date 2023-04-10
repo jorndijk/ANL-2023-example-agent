@@ -74,8 +74,8 @@ class Group49Agent(DefaultParty):
         self.min_concession_rate = 0
         # How much to change concession rate by every time
         self.adapting_rate = 0.001
-        self.randomness = 0.02
-        self.issue_flexibility = 0.1
+        self.randomness = 0.05
+        self.issue_flexibility = 0.2
         # concession rate opponent
         self.average_concession_rate_opponent = 0
         # list of predicted utilities of opponent from his bids
@@ -218,6 +218,7 @@ class Group49Agent(DefaultParty):
 
         # Start by creating the best bid to propose as offer
         self.update_weights()
+        progress = self.progress.get(time() * 1000)
         best_bid = None
         best_bid_score = 0
         best_product = 0
@@ -255,6 +256,11 @@ class Group49Agent(DefaultParty):
             self.currProduct = best_product
             action = Accept(self.me, self.last_received_bid)
         else:
+            higherThanBase = True
+            if self.profile.getReservationBid():
+                higherThanBase = self.profile.isPreferredOrEqual(self.last_received_bid, self.profile.getReservationBid())
+            if higherThanBase and progress > 0.94:
+                best_bid = self.maximum_received_bid
             # increase number of bids done by our agent
             self.number_of_agent_bids += 1
             # set last send bid to this bid
@@ -302,7 +308,7 @@ class Group49Agent(DefaultParty):
             higherThanBase = self.profile.isPreferredOrEqual(last_received_bid, self.profile.getReservationBid())
 
         reservation_conditions = [
-            progress > 0.9,
+            progress > 0.95,
             self.above_reservation_value(last_received_bid) or (higherThanBase and progress > 0.98),
             opponent_bid_value > self.maximum_received_utility - Decimal(0.1)
         ]
@@ -448,7 +454,7 @@ class Group49Agent(DefaultParty):
         min_concession_rate = self.min_concession_rate + self.adapting_rate * alpha * (opponent_rate_change + time_passed_change)
         self.min_concession_rate = max(min_concession_rate, -0.025)
         if(min_concession_rate < 0):
-            self.max_concession_rate = self.min_concession_rate - 0.025
+            self.max_concession_rate = min(self.min_concession_rate - 0.025, 0)
 
     def alpha(self):
         return 2 / (1 + math.e**(- self.number_of_opponent_bids / 270.307)) - 1

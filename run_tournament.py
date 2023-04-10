@@ -22,24 +22,20 @@ tournament_settings = {
             "parameters": {"storage_dir": "agent_storage/Group49Agent"},
         },
         {
-            "class": "agents.template_agent.template_agent.TemplateAgent",
-            "parameters": {"storage_dir": "agent_storage/TemplateAgent"},
-        },
-        {
             "class": "agents.boulware_agent.boulware_agent.BoulwareAgent",
         },
-        # {
-        #     "class": "agents.conceder_agent.conceder_agent.ConcederAgent",
-        # },
-        # {
-        #     "class": "agents.hardliner_agent.hardliner_agent.HardlinerAgent",
-        # },
-        # {
-        #     "class": "agents.linear_agent.linear_agent.LinearAgent",
-        # },
-        # {
-        #     "class": "agents.random_agent.random_agent.RandomAgent",
-        # },
+        {
+            "class": "agents.conceder_agent.conceder_agent.ConcederAgent",
+        },
+        {
+            "class": "agents.hardliner_agent.hardliner_agent.HardlinerAgent",
+        },
+        {
+            "class": "agents.linear_agent.linear_agent.LinearAgent",
+        },
+        {
+            "class": "agents.random_agent.random_agent.RandomAgent",
+        },
         # {
         #     "class": "agents.stupid_agent.stupid_agent.StupidAgent",
         # },
