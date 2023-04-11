@@ -317,9 +317,8 @@ class Group49Agent(DefaultParty):
         return condition
 
     def find_bid(self) -> Bid:
-        # compose a list of all possible bids
-        domain = self.profile.getDomain()
-        all_bids = AllBidsList(domain)
+        """Finds bid based on the weights of the bids and returns this bid
+        """
 
         bid: Dict[str, Value] = {}
 
@@ -330,49 +329,15 @@ class Group49Agent(DefaultParty):
         # if not the first bid
         else:
             weights = self.weights
-            #print(weights)
-            #print(weights)
             for issue, values in weights.items():
                 random_number = random.random()
                 check_number = 0
-                #print(values.items())
-                #bid[issue] = random.choices(values.keys(), weights=values.values(), k=1)
                 for value, weight in values.items():
                     check_number += weight
                     if random_number < check_number:
                         bid[issue] = value
-                        #print(value)
                         break
-        #print(bid)
-        #print(self.profile.getUtility(Bid(bid)))
         return Bid(bid)
-
-    def score_bid(self, bid: Bid, alpha: float = 0.95, eps: float = 0.1) -> float:
-        """Calculate heuristic score for a bid
-
-        Args:
-            bid (Bid): Bid to score
-            alpha (float, optional): Trade-off factor between self interested and
-                altruistic behaviour. Defaults to 0.95.
-            eps (float, optional): Time pressure factor, balances between conceding
-                and Boulware behaviour over time. Defaults to 0.1.
-
-        Returns:
-            float: score
-        """
-        progress = self.progress.get(time() * 1000)
-
-        our_utility = float(self.profile.getUtility(bid))
-
-        time_pressure = 1.0 - progress ** (1 / eps)
-        score = alpha * time_pressure * our_utility
-
-        if self.opponent_model is not None:
-            opponent_utility = self.opponent_model.get_predicted_utility(bid)
-            opponent_score = (1.0 - alpha * time_pressure) * opponent_utility
-            score += opponent_score
-
-        return score
 
     def update_weights(self):
         """Fill randomness values dictionary using all issue weights
