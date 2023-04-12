@@ -238,7 +238,6 @@ class Group49Agent(DefaultParty):
             if self.last_received_bid == None:
                 product = 0
             else:
-                #product = self.utilityProduct(bid, self.last_received_bid)
                 product = self.nashProduct(bid)
             if utility + product > best_bid_score + best_product and utility_change <= min_rate + self.randomness and utility_change >= max_rate - self.randomness and self.above_reservation_value(bid):
                 best_bid_score = utility
@@ -287,21 +286,11 @@ class Group49Agent(DefaultParty):
         if last_received_bid is None:
             return False
         
-        # our_bid_value = 0
-        # if our_bid is not None:
-        our_bid_value = self.profile.getUtility(our_bid)
         opponent_bid_value = self.profile.getUtility(last_received_bid)
 
         # progress of the negotiation session between 0 and 1 (1 is deadline)
         progress = self.progress.get(time() * 1000)
 
-        # Accept condition: ACconst(β) ∧ (ACtime(0.99) ∨ (ACnext ∧ ACtime(0.5))). So:
-        # If the offer is valued above the average/maximum value AND
-        # (If 99% of the time towards the deadline has passed OR
-        # (The offer is valued above our offers value AND 
-        # 50% of the time towards the deadline has pased))
-
-        # Can be changed to maximum received utility instead of average
         # These conditions must always be true
         higherThanBase = True
         if self.profile.getReservationBid():
@@ -452,15 +441,18 @@ class Group49Agent(DefaultParty):
             return weight
 
     def add_to_average(self, size: int, utility: Decimal) -> Decimal:
+        """Adds new value to average
+        """
         return (size * self.average_received_utility + utility) / (size + 1)
-    
-    def utilityProduct(self, our_bid: Bid, opponent_bid: Bid) -> Decimal:
-        return self.profile.getUtility(our_bid) * self.profile.getUtility(opponent_bid)
 
     def nashProduct(self, bid: Bid) -> Decimal:
+        """Calculates the nash product of our bid and the opponents bid
+        """
         return self.profile.getUtility(bid) * Decimal(self.opponent_model.get_predicted_utility(bid)) 
 
     def above_reservation_value(self, bid: Bid) -> bool:
+        """Checks whether the bids utility value is above the reservation value
+        """
         weights = self.profile.getWeights()
         for iss in self.profile.getWeights():
             if self.profile.getUtilities().get(iss).getUtility(bid.getIssueValues()[iss]) - Decimal(self.issue_flexibility) < weights[iss]:
